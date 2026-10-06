@@ -1,43 +1,44 @@
 # Roadmap, known issues and technical debt
 
+Scope set by the owner (2026-10-06): an offline Mushaf that behaves like a real book and reopens on the last page read, plus **simple** tools for reading and memorizing. No audio or other large features.
+
 Priorities: **P0** blocks a usable release, **P1** important, **P2** nice to have.
 
-## Known bugs
+## Done (v2 Mushaf reader)
 
-| Pri | Area | Issue |
+- 604-page Madinah Mushaf with the exact KFGQPC page and line layout, swiped like a book
+- Reopens on the last page read
+- Surah and juz contents, go to page, current surah/juz highlighted
+- Page and verse bookmarks
+- Verse long-press: bookmark, copy, share, memorize from here (works on Android, iOS and web)
+- Verse search, diacritic-insensitive
+- Memorization mode (hide words, reveal by tap, word or verse) with an optional first-word hint
+- Mark pages as memorized, progress per surah and overall
+- Light, sepia and dark themes (or follow system), keep screen awake
+- Migration of the old single saved verse
+
+## To verify on devices (P0)
+
+- Android 8+ and iOS (Expo Go SDK 51): page swipe direction, `initialScrollIndex` landing on the right page, long-press timing, word masks, font rendering of the verse-end glyphs (U+FC00…), and the one-time reload that resets an old `forceRTL(true)`.
+- Performance of page swipes on low-end Android (each page has about 150 `Pressable`s). If it is slow, render each line as one `Text` with nested spans and keep only the `View` rows for justification.
+- Small phones (width ≤ 360 dp): the base font gets small (about 18 px). Consider an optional "large text" mode that scrolls inside a page.
+
+## Planned simple features (P1–P2)
+
+| Pri | Feature | Notes |
 | --- | --- | --- |
-| P0 | Reader | Right-to-left justified text is wrong (alignment/direction). Full analysis in `RTL_JUSTIFY.md`. |
-| P0 | Reader (Android) | Long-press uses `ActionSheetIOS`, which does not exist on Android, so save/copy fails there. Needs a cross-platform sheet (e.g. `@expo/react-native-action-sheet`, a modal, or `Alert`). |
-| P1 | Reader | "Continue reading" does not scroll to the saved verse: `verseCords` is never filled (`setVerseCords` unused) and the scroll target is hard-coded to `verseCords[40]`. Instead, verses before the saved one are simply not rendered. |
-| P1 | Reader | `useState(50 + verse)` concatenates strings because route params are strings (`verse = "3"` gives `"503"`). Parse params with `Number()` once at the top. |
-| P1 | Reader | The Basmalah image is shown for every surah when starting at verse 0, including Al-Fatiha (where the Basmalah is already verse 1, so it appears twice) and At-Tawbah (which has no Basmalah). |
-| P1 | Reader | `console.log` runs for every verse on every render (slow on long surahs). |
-| P1 | Fonts | `othmani-1` is loaded in `index.tsx` without waiting for it; the root layout only waits for `SpaceMono`. Load the Quran font in `_layout.tsx` before hiding the splash. |
-| P1 | RTL | `forceRTL` only applies after a reload; `text-right` becomes left once RTL is active. See `RTL_JUSTIFY.md`. |
-| P2 | Home | Search only matches the Arabic `name`; README promised English search. |
-| P2 | Home | Bookmark button label shows `{...}` braces literally (maybe intended as ﴿ ﴾ ornate brackets); only a single bookmark is stored. |
-| P2 | Reader | Skipped verses render empty fragments without keys (React key warnings). |
+| P1 | Juz / hizb markers | `۞` is already in the text; show the hizb/quarter name in the page header. Needs quarter data (not in hafsData). |
+| P1 | Reading goal / khatma tracker | Daily pages target, streak, "pages read today". Uses `lastPage` changes. |
+| P1 | Memorization review list | Pages marked memorized, sorted by when they were last reviewed, with a "reviewed today" action. |
+| P2 | Notes on a verse | Short personal note per verse, stored next to bookmarks. |
+| P2 | Bookmark colors / names | Several reading positions (e.g. one per family member). |
+| P2 | Two-page spread on tablets / landscape | Two `MushafPage`s side by side. |
+| P2 | Sajdah marker | Show a sajdah indicator on lines containing `۩`. |
 
 ## Technical debt
 
-- `npx tsc --noEmit` reports **37 errors** (14 in `app/index.tsx`, 23 in `app/quran.tsx`): missing NativeWind types for `className` (add `nativewind-env.d.ts` with `/// <reference types="nativewind/types" />`), untyped `useRef(null)`/`useState(null)`, string route params used as numbers/indexes, `delayLongPress` on `Text`.
-- `npm run lint` passes with 10 warnings (unused vars, `==`, hook deps). The first run auto-installs `eslint` + `eslint-config-expo` and creates `.eslintrc.js` — commit those when lint is adopted.
-- `expo-doctor`: `expo`, `expo-router`, `expo-splash-screen`, `expo-updates` are behind the SDK 51 patch versions (`npx expo install --check`). Expo SDK 51 is old; plan an SDK upgrade before store release (newer Expo Go builds will not open SDK 51 projects).
-- Unused dependencies: `react-native-fs` (not usable in Expo Go), `react-scroll-into-view` (web-only), `expo-file-system`, `@react-navigation/native-stack`.
-- Repo bloat: `assets/ChatGPT.html` + `assets/ChatGPT_files/` (saved chat), `assets/fonts/Othmani.zip` (10 MB), `Othmani-old.ttf`, template images/components, `assets/SavedVerses.json`.
-- `assets/Quran.json` (6 MB, with BOM) is imported in two screens and loaded into the JS bundle at startup. Consider a slimmer Arabic-only file, or lazy loading per surah.
-- `app.json`: `scheme` is still `myapp`; no `ios.bundleIdentifier` / `android.package`; splash background is white while the app is dark-only; `userInterfaceStyle` is `automatic` but the theme is forced dark.
-- Unit tests: only the Expo template snapshot test exists.
-
-## Planned features
-
-1. **Fix RTL justify** (P0) — option A from `RTL_JUSTIFY.md`.
-2. **Cross-platform verse actions** (P0) — save, copy, share.
-3. **Reliable "continue reading"** (P1) — scroll to the exact verse, keep surrounding context.
-4. **Multiple bookmarks / reading history** (P1).
-5. **Mushaf page mode** (P1) — 604 pages, 15 lines, juz/hizb navigation, using KFGQPC/QUL line data.
-6. **Search** (P1) — surah by Arabic/English/number, and verse text search using `aya_text_emlaey` (diacritic-free).
-7. **English translation toggle** (P2) — data already in `Quran.json` (`en` per verse).
-8. **Light/dark theme toggle, font size setting** (P2).
-9. **Audio recitation** (P2) — `Quran.json` has per-verse audio paths but no files or host.
-10. **Release** — app icons, store metadata, EAS Build config (`eas.json`), bundle IDs.
+- `npx expo lint` is not set up (the first run installs eslint + `eslint-config-expo` and creates `.eslintrc.js`).
+- `expo-doctor`: `expo`, `expo-router`, `expo-splash-screen`, `expo-updates` are behind the SDK 51 patch versions (`npx expo install --check`). Expo SDK 51 is old; plan an SDK upgrade before a store release, because current Expo Go builds may not open SDK 51 projects.
+- Unused dependencies: `nativewind` / `tailwindcss` (no app code uses `className` any more), `react-native-fs`, `react-scroll-into-view`, `expo-file-system`, `@react-navigation/native-stack`.
+- Repo size: `assets/ChatGPT.html` + `assets/ChatGPT_files/`, `assets/fonts/Othmani.zip` (10 MB), `Othmani-old.ttf`, template images/components, `assets/SavedVerses.json`. `assets/Quran.json` (6 MB) is now only used by the build script.
+- `app.json`: no `ios.bundleIdentifier` / `android.package`, no `eas.json`; the icon and splash are still placeholders.

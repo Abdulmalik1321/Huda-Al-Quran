@@ -1,89 +1,88 @@
 # Huda Al-Quran (هدى القرآن)
 
-**Huda Al-Quran** is a simple, lightweight, fully offline Quran reader for **Android and iOS**, built with React Native and Expo. The app is a charitable endowment (وقف لله تعالى) and focuses on a clean, distraction-free reading experience in the Uthmani script.
+**Huda Al-Quran** is a simple, fully offline Mushaf for **Android and iOS**, built with React Native and Expo. It shows the 604 pages of the Madinah Mushaf exactly as printed (same pages, same 15 lines), you turn pages like a real book, and it always reopens on the last page you read. The app is a charitable endowment (وقف لله تعالى).
 
-> Status: early development. The core reading flow works; see [Current state](#current-state) and [`docs/ROADMAP.md`](docs/ROADMAP.md) for what is done and what is planned.
+## Features
 
-## Current state
+- **Real Mushaf pages**: the KFGQPC Uthmanic Hafs layout, with surah title frames, Basmalah, verse-end markers, juz and page numbers. Swipe to turn pages right to left.
+- **Reopens on your last page** every time.
+- **Contents (الفهرس)**: surahs and juz, go to any page number, search surah names (Arabic, English or number).
+- **Bookmarks (العلامات)**: bookmark a page or a single verse. Saved locally and listed with a preview.
+- **Search (البحث)**: find verses by any word, ignoring diacritics, and jump to the page with the verse highlighted.
+- **Verse actions**: long-press a verse to bookmark, copy, share, or start memorizing from it.
+- **Memorization mode (وضع التسميع)**: hides the words of the page. Tap a word to reveal up to it, or reveal word by word or verse by verse. An optional hint keeps the first word of each verse visible.
+- **Memorization progress**: mark pages as memorized and track progress per surah and overall.
+- **Themes**: light, sepia (paper) or night, or follow the system. The screen stays awake while reading (optional).
+- 100% offline: no network, no accounts, no audio.
 
-| Feature | Status |
-| --- | --- |
-| Full Quran text (Arabic, Uthmani script, 114 surahs / 6236 verses) bundled offline | Done |
-| Surah list with search by Arabic name | Done |
-| Surah reading screen (continuous text, Arabic-Indic verse numbers, Basmalah image) | Done |
-| Long-press a verse: bookmark ("حفظ الآية") or copy ("نسخ الآية") | iOS only (uses `ActionSheetIOS`) |
-| "Continue where you stopped" button (single bookmark in AsyncStorage) | Partial: opens the surah but does not scroll to the verse |
-| Right-to-left **justified** text in the reader | **Broken / open issue** — see [`docs/RTL_JUSTIFY.md`](docs/RTL_JUSTIFY.md) |
-| Dark theme | Forced dark (no toggle yet) |
-| English translation, English search, light/dark toggle | Planned (data for English is already in `assets/Quran.json`) |
+## Technology
 
-## Technology stack
-
-- **React Native 0.74** + **Expo SDK 51** (managed workflow)
-- **Expo Router 3** (file-based navigation, `app/` directory)
-- **NativeWind 2** (Tailwind `className` styling) with Tailwind CSS 3
-- **AsyncStorage** for the saved verse (bookmark)
-- **expo-clipboard** for copying verses
-- **KFGQPC Uthmanic Hafs** font (`assets/fonts/Othmani.ttf`, registered as `othmani-1`)
+- **React Native 0.74** + **Expo SDK 51**, **Expo Router 3**
+- **AsyncStorage** for last page, bookmarks, memorization progress and settings
+- **KFGQPC Uthmanic Hafs v2.0** font and data (`assets/fonts/Othmani/`), compiled into `assets/mushaf/*.json` by `scripts/build-mushaf.py`
 
 ## Getting started
 
-Requirements: Node.js 18+ and npm. To run on a device, install **Expo Go** (SDK 51) or use an Android emulator / iOS simulator.
+Requirements: Node.js 18+ and npm. On a phone, use **Expo Go for SDK 51**, or an Android emulator / iOS simulator.
 
 ```bash
 git clone https://github.com/Abdulmalik1321/Huda-Al-Quran.git
 cd Huda-Al-Quran
 npm install
-npx expo start        # then press "a" for Android, "i" for iOS, or scan the QR code
+npx expo start        # press "a" for Android, "i" for iOS, "w" for web, or scan the QR code
 ```
 
-Other scripts:
+Other commands:
 
 ```bash
-npm run android      # expo start --android
-npm run ios          # expo start --ios
-npm run lint         # expo lint (first run installs eslint + eslint-config-expo)
-npm test             # jest (watch mode)
-npx tsc --noEmit     # type check (currently reports errors, see docs/ROADMAP.md)
+npx jest --ci        # tests (data integrity + helpers)
+npx tsc --noEmit     # type check
 ```
 
-Note: `I18nManager.forceRTL(true)` only takes effect after the app is fully reloaded, so the first launch after install may render left-to-right.
+Rebuilding the Mushaf data (only needed if the KFGQPC sources or the build script change):
+
+```bash
+pip install uharfbuzz
+python3 scripts/build-mushaf.py
+```
 
 ## Project structure
 
 ```
 app/
-  _layout.tsx     Root stack navigator, dark theme, forces RTL
-  index.tsx       Home: Basmalah, "continue reading" button, surah search + list
-  quran.tsx       Reader: renders one surah as justified Arabic text, long-press actions
-  +html.tsx       Web-only HTML shell (dir="rtl", lang="ar")
-  +not-found.tsx  404 screen (Expo template)
-assets/
-  Quran.json      The Quran data used by the app (Arabic + English per verse)
-  fonts/          Othmani.ttf (used), KFGQPC Hafs reference data in fonts/Othmani/
-  images/         Basmalah.png, icon, splash
-components/, hooks/, constants/   Mostly unused Expo template leftovers
-docs/             Architecture, RTL/justify investigation, roadmap, dev log
-AGENTS.md         Project memory / conventions for AI coding agents
+  _layout.tsx     Root stack; loads the font and saved state before hiding the splash
+  index.tsx       The Mushaf reader (opens on the last page)
+  contents.tsx    Surahs / juz / go to page / memorization progress
+  search.tsx      Verse search
+  bookmarks.tsx   Bookmarks list
+  settings.tsx    Theme, keep awake, memorization hint, help
+components/
+  MushafPage.tsx  Renders one Mushaf page
+  VerseActions.tsx  Long-press sheet for a verse
+lib/
+  quran.ts        Mushaf data access
+  store.tsx       Persistent app state
+  theme.ts, arabic.ts
+assets/mushaf/    Generated page, verse, text and search data
+scripts/build-mushaf.py  Builds assets/mushaf from the KFGQPC files
+docs/             Architecture, roadmap, dev log, RTL notes
+AGENTS.md         Project memory for AI coding agents
 ```
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for details on the data format and screens.
 
 ## Documentation
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the app is put together, data model, navigation
-- [`docs/RTL_JUSTIFY.md`](docs/RTL_JUSTIFY.md) — analysis of the right-to-left justified text problem and the fix options
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) — known bugs, technical debt, and planned features
-- [`docs/DEVLOG.md`](docs/DEVLOG.md) — chronological development log
-- [`AGENTS.md`](AGENTS.md) — long-term memory and working rules for AI agents on this repo
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): data pipeline, page rendering, reader, state
+- [`docs/ROADMAP.md`](docs/ROADMAP.md): done, to verify, planned simple features, technical debt
+- [`docs/DEVLOG.md`](docs/DEVLOG.md): development log
+- [`docs/RTL_JUSTIFY.md`](docs/RTL_JUSTIFY.md): why the old justified-text reader failed, and how the page layout solves it
+- [`AGENTS.md`](AGENTS.md): long-term memory and working rules for AI agents
 
 ## Contributing
 
-1. Fork the repository.
-2. Create a branch for your feature or fix: `git checkout -b my-feature`.
-3. Commit your changes with a meaningful message and add an entry to `docs/DEVLOG.md`.
-4. Push and open a pull request.
+1. Fork the repository and create a branch: `git checkout -b my-feature`.
+2. Make your change, run `npx jest --ci` and `npx tsc --noEmit`, and add an entry to `docs/DEVLOG.md`.
+3. Push and open a pull request.
 
-## Data and font credits
+## Credits
 
-The Uthmanic Hafs font and reference data (`assets/fonts/Othmani/`) are published by the King Fahd Glorious Quran Printing Complex (KFGQPC), version 2.0.
+The Mushaf text, layout and font are from the King Fahd Glorious Quran Printing Complex (KFGQPC), Uthmanic Hafs version 2.0.

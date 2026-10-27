@@ -1,10 +1,18 @@
 # Right-to-left justified Quran text
 
-This is the main open problem of the project: the reader (`app/quran.tsx`) should display each surah as continuous Arabic text that is **justified** (flush on both edges) and flows **right to left**, like a printed Mushaf. In practice the text does not consistently read/align right to left when `text-justify` is applied.
+## Resolution (2026-10-06)
 
-Status: **analysed, not fixed yet.** Nothing below has been verified on a device; the analysis comes from reading `app/quran.tsx` and the React Native 0.74 source in `node_modules/react-native`. Every fix must be tested on a real Android device **and** an iOS device/simulator.
+**Solved by option C below.** The old continuous-text reader (`app/quran.tsx`) was replaced by a page-by-page Mushaf. Each line is a row of separate word views (`flexDirection: "row-reverse"`, `justifyContent: "space-between"`), and the line breaks come from the KFGQPC Mushaf layout. Justification no longer depends on `textAlign: "justify"`, `writingDirection` or `I18nManager`, and the native layout direction is kept LTR. Checked on the web build. Still to be checked on Android and iOS devices (see the checklist at the end). See `ARCHITECTURE.md` for the implementation.
 
-## How the reader renders text today
+The analysis below is kept because it explains why `textAlign: "justify"` must not be used for Arabic text in this app (for example in future translation or tafsir views).
+
+---
+
+The original problem: the reader (`app/quran.tsx`) displayed each surah as continuous Arabic text that should be **justified** (flush on both edges) and flow **right to left**, like a printed Mushaf. In practice the text did not consistently align right to left when `text-justify` was applied.
+
+The analysis comes from reading `app/quran.tsx` and the React Native 0.74 source in `node_modules/react-native`.
+
+## How the old reader rendered text
 
 ```tsx
 <Text  // outer paragraph
